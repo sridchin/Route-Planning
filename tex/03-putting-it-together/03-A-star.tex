@@ -1,0 +1,12 @@
+\item \points{3c}
+
+Let us define a new cost on the original search problem: $\text{Cost}_{rel}
+((w', i, j), \text{END}) = f_b(x_{i:j})$. This is clearly at most the original
+cost $\text{Cost}((w', i, j), \text{END}) = b(w', x_{i:j})$ by construction of
+$f_b$. Therefore $h(s) = \text{FutureCost}_{rel}(s)$ is a consistent heuristic
+for the original search problem, as shown in class.
+
+Now, notice that $\text{Cost}_{rel}((w', i, j), a)$ does not depend on the
+previous word $w'$. Therefore, we can also simplify the state of our relaxed
+search problem to only include $(i, j)$ such that computing the future costs in
+that problem also yields $h$.
