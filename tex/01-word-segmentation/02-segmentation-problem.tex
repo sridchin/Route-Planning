@@ -1,8 +1,8 @@
 \item \points{1b}
 Implement an algorithm that, unlike the greedy algorithm, finds the optimal word
 segmentation of an input character sequence. Your algorithm will consider costs
-based simply on a unigram cost function. {\tt UniformCostSearch} (UCS) is
-implemented for you in {\tt util.py}, and you should make use of it here.
+based simply on a unigram cost function. |UniformCostSearch| (UCS) is
+implemented for you in |util.py|, and you should make use of it here.
 \footnote{Solutions that use UCS ought to exhibit fairly fast execution time for
 this problem, so using A* here is unnecessary.}
 
@@ -11,32 +11,28 @@ state-space {\bf search problem}.  How would you represent a state?  What are
 the successors of a state?  What are the state transition costs?  (You don't
 need to answer these questions in your writeup.)
 
-Fill in the member functions of the {\tt SegmentationProblem} class and the
-{\tt segmentWords} function.
+Fill in the member functions of the |SegmentationProblem| class and the
+|segmentWords| function.
 
-The argument {\tt unigramCost} is a function that takes in a single string
+The argument |unigramCost| is a function that takes in a single string
 representing a word and outputs its unigram cost. You can assume that all of the
 inputs would be in lower case.
 
-The function {\tt segmentWords} should return the segmented sentence with spaces
-as delimiters, i.e. {\tt ' '.join(words)}.
+The function |segmentWords| should return the segmented sentence with spaces
+as delimiters, i.e. |' '.join(words)|.
 
-For convenience, you can actually run {\tt python submission.py} to enter a
-console in which you can type character sequences that will be segmented by your
-implementation of {\tt segmentWords}.  To request a segmentation, type
-{\tt seg mystring} into the prompt.  For example:
+To request a segmentation, type |seg mystring| into the prompt.  For example:
 
 \begin{lstlisting}
+$ python submission.py
+Training language cost functions [corpus: leo-will.txt]... Done!
+
 >> seg thisisnotmybeautifulhouse
 
 Query (seg): thisisnotmybeautifulhouse
 
 this is not my beautiful house
 \end{lstlisting}
-
-Console commands other than |seg| --- namely |ins| and |both| --- will be used
-in the upcoming parts of the assignment.  Other commands that might help with
-debugging can be found by typing |help| at the prompt.
 
 {\em Hint: You are encouraged to refer to |NumberLineSearchProblem| and
 |GridSearchProblem| implemented in |util.py| for reference. They don't

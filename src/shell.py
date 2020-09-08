@@ -15,6 +15,7 @@ def repl(unigramCost, bigramCost, possibleFills, command=None):
 
     while True:
         sys.stdout.write('>> ')
+        sys.stdout.flush()
         line = sys.stdin.readline().strip()
         if not line:
             break

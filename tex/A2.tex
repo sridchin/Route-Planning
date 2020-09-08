@@ -25,26 +25,7 @@
 
 \clearpage
 
-In this homework, we consider two tasks: {\em word segmentation} and {\em vowel
-insertion}.
-
-Word segmentation often comes up when processing many non-English languages, in
-which words might not be flanked by spaces on either end, such as written
-Chinese or long compound German words.\footnote{In German,
-``Windschutzscheibenwischer'' is ``windshield wiper''. Broken into parts:
-``wind'' \textrightarrow ``wind''; ``schutz'' \textrightarrow ``block/
-protection''; ``scheiben'' \textrightarrow ``panes''; ``wischer''
-\textrightarrow ``wiper''.} Vowel insertion is relevant for languages like
-Arabic or Hebrew, where modern script eschews notations for vowel sounds and the
-human reader infers them from context.\footnote{See
-\url{https://en.wikipedia.org/wiki/Abjad}.} More generally, this is an instance
-of a reconstruction problem with a lossy encoding and some context.
-
-We already know how to optimally solve any particular search problem with graph
-search algorithms such as uniform cost search or A*.  Our goal here is modeling
---- that is, converting real-world tasks into state-space search problems.
-
-\input{00-setup}
+\input{00-intro}
 \clearpage
 
 \begin{enumerate}[wide, labelindent=0pt]
