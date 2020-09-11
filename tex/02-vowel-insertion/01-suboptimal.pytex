@@ -8,3 +8,8 @@ Show, as in problem 1, that this greedy algorithm is suboptimal, by providing a
 realistic counter-example using English text. Make any assumptions you'd like
 about |possibleFills| and the bigram cost function, but bigram costs must remain
 positive.
+
+🐍
+import re
+with open('submission.tex') as f: print((re.search(r'% 📝_2a(.*?)% 📝_2a', f.read(), re.DOTALL)).group(1))
+🐍

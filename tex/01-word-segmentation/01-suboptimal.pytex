@@ -15,3 +15,8 @@ function doesn't need to be explicitly defined. You can just point out the
 relative cost of different word sequences that are relevant to the example you
 provide. And your example should be based on a realistic English word sequence 
 --- don't simply use abstract symbols with designated costs.
+
+🐍
+import re
+with open('submission.tex') as f: print((re.search(r'% 📝_1a(.*?)% 📝_1a', f.read(), re.DOTALL)).group(1))
+🐍

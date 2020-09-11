@@ -10,3 +10,8 @@ Now, notice that $\text{Cost}_{rel}((w', i, j), a)$ does not depend on the
 previous word $w'$. Therefore, we can also simplify the state of our relaxed
 search problem to only include $(i, j)$ such that computing the future costs in
 that problem also yields $h$.
+
+🐍
+import re
+with open('submission.tex') as f: print((re.search(r'% 📝_3c(.*?)% 📝_3c', f.read(), re.DOTALL)).group(1))
+🐍
