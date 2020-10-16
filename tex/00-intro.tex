@@ -29,8 +29,8 @@ A very common language model in NLP is an $n$-gram sequence model. This is a
 function that, given $n$ consecutive words, provides a cost based on the
 negative log likelihood that the $n$-th word appears just after the first $n-1$
 words.\footnote{This model works under the assumption that text roughly
-satisfies the \href{https://en.wikipedia.org/wiki/Markov_property} Markov
- property.}
+satisfies the \href{https://en.wikipedia.org/wiki/Markov_property}{Markov
+ property.}}
 
 The cost will always be positive, and lower costs indicate better fluency.
 \footnote{Modulo edge cases, the $n$-gram model score in this assignment is
