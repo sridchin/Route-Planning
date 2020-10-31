@@ -1,6 +1,6 @@
 {\bf Introduction}
 
-In this assignment, we consider two tasks: {\em word segmentation} and {\em vowel
+In this assignment, you will consider two tasks: {\em word segmentation} and {\em vowel
 insertion}.
 
 Word segmentation often comes up when processing many non-English languages, in
@@ -15,13 +15,13 @@ human reader infers them from context.\footnote{See
 \url{https://en.wikipedia.org/wiki/Abjad}.} More generally, this is an instance
 of a reconstruction problem with a lossy encoding and some context.
 
-We already know how to optimally solve any particular search problem with graph
-search algorithms such as uniform cost search or A*.  Our goal here is modeling
+You already know how to optimally solve any particular search problem with graph
+search algorithms such as uniform cost search or A*.  Your goal here is modeling
 --- that is, converting real-world tasks into state-space search problems.
 
 {\bf Setup: $n$-gram language models and uniform-cost search}
 
-Our algorithm will base its segmentation and insertion decisions on the cost of
+Your algorithm will base its segmentation and insertion decisions on the cost of
 processed text according to a {\em language model}. A language model is some
 function of the processed text that captures its fluency.
 
@@ -40,7 +40,7 @@ words given the sequence of previous $n-1$ words.  This estimate is gathered
 from frequency counts taken by reading Leo Tolstoy's {\em War and Peace} and
 William Shakespeare's {\em Romeo and Juliet}.}
 
-As a simple example: In a case where $n=2$ and $c$ is our $n$-gram cost
+As a simple example: In a case where $n=2$ and $c$ is your $n$-gram cost
 function, $c(${\sf big}, {\sf fish}$)$ would be low, but $c(${\sf fish},
 {\sf fish}$)$ would be fairly high.
 
@@ -61,7 +61,7 @@ b(w_3, w_4),
 where $w_0$ is |-BEGIN-|, a special token that denotes the beginning of the
 sentence.
 
-We have estimated $u$ and $b$ based on the statistics of $n$-grams in text. Note
+Estimate $u$ and $b$ based on the statistics of $n$-grams in text. Note
 that any words not in the corpus are automatically assigned a high cost, so you
 do not have to worry about that part.
 
@@ -75,7 +75,7 @@ space growth.
 For convenience, you can run the terminal command |python submission.py| to
 enter a console for testing and debugging your code.  It should look like this:
 \begin{lstlisting}
-$ python submission.py
+(XCS221)$ python submission.py
 Training language cost functions [corpus: leo-will.txt]... Done!
 
 >> 

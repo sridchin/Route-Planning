@@ -1,15 +1,26 @@
 \item \points{3c}
 
-Let us define a new cost on the original search problem: $\text{Cost}_{rel}
-((w', i, j), \text{END}) = f_b(x_{i:j})$. This is clearly at most the original
-cost $\text{Cost}((w', i, j), \text{END}) = b(w', x_{i:j})$ by construction of
-$f_b$. Therefore $h(s) = \text{FutureCost}_{rel}(s)$ is a consistent heuristic
-for the original search problem, as shown in class.
+Let's find a way to speed up the joint insertion of space and vowel with A\*.
+Recall that one way to find the heuristic function $h(s)$ for A\* is to define a
+relaxed search problem $P_\text{rel}$ where
+$\text{Cost}_\text{rel}(s,a)\le \text{Cost}(s,a)$, and then $h(s)$ is defined to
+be $\text{FutureCost}_\text{rel}(s)$.
 
-Now, notice that $\text{Cost}_{rel}((w', i, j), a)$ does not depend on the
-previous word $w'$. Therefore, we can also simplify the state of our relaxed
-search problem to only include $(i, j)$ such that computing the future costs in
-that problem also yields $h$.
+Given a bigram model $b$, a function that takes any $(w',w)$ and returns a
+number, define a unigram model $f_b$, another function that takes any $w$ and
+returns a number, based on $b$.
+
+Use this function $f_b$ to help define $P_\text{rel}$.
+
+One example of a $f_b$ is $f_b(w)=b(w,w)$. However, this will not lead to a
+consistent heuristic because $\text{Cost}_\text{rel}(s,a)$ is not guaranteed to
+be less than or equal to $\text{Cost}(s,a)$ with this scheme.
+
+Explicitly define the states, actions, cost, start state, and end state of the
+relaxed problem and explain why $h(s)$ is consistent.
+
+{\em Hint: If $f_b$ only accepts a single $w$, do we need to keep track of the
+previous word in our state?}
 
 🐍
 import re
