@@ -1,7 +1,7 @@
 \item \points{3c}
 
-Let's find a way to speed up the joint insertion of space and vowel with A\*.
-Recall that one way to find the heuristic function $h(s)$ for A\* is to define a
+Let's find a way to speed up the joint insertion of space and vowel with A\mbox{*}.
+Recall that one way to find the heuristic function $h(s)$ for A\mbox{*} is to define a
 relaxed search problem $P_\text{rel}$ where
 $\text{Cost}_\text{rel}(s,a)\le \text{Cost}(s,a)$, and then $h(s)$ is defined to
 be $\text{FutureCost}_\text{rel}(s)$.
