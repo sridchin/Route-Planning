@@ -23,5 +23,9 @@
 
   "3c" : {"points":3, "question_id":"3c", "is_written":true, "is_extra_credit":false},
 
-  "3d" : {"points":3, "question_id":"3d", "is_written":true, "is_extra_credit":false}
+  "3d" : {"points":3, "question_id":"3d", "is_written":true, "is_extra_credit":false},
+
+  "4a" : {"points":2, "question_id":"4a", "is_written":true, "is_extra_credit":false},
+  "4b" : {"points":2, "question_id":"4b", "is_written":true, "is_extra_credit":false},
+  "4c" : {"points":2, "question_id":"4c", "is_written":true, "is_extra_credit":false}
 }
