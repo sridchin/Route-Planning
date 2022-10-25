@@ -1,3 +1,5 @@
+from typing import Callable, List, Set
+
 import shell
 import util
 import wordsegUtil
@@ -5,8 +7,9 @@ import wordsegUtil
 ############################################################
 # Problem 1b: Solve the segmentation problem under a unigram model
 
+
 class SegmentationProblem(util.SearchProblem):
-    def __init__(self, query, unigramCost):
+    def __init__(self, query: str, unigramCost: Callable[[str], float]):
         self.query = query
         self.unigramCost = unigramCost
 
@@ -15,7 +18,7 @@ class SegmentationProblem(util.SearchProblem):
         # ### START CODE HERE ###
         # ### END CODE HERE ###
 
-    def isEnd(self, state):
+    def isEnd(self, state) -> bool:
         pass
         # ### START CODE HERE ###
         # ### END CODE HERE ###
@@ -25,9 +28,10 @@ class SegmentationProblem(util.SearchProblem):
         # ### START CODE HERE ###
         # ### END CODE HERE ###
 
-def segmentWords(query, unigramCost):
+
+def segmentWords(query: str, unigramCost: Callable[[str], float]) -> str:
     if len(query) == 0:
-        return ''
+        return ""
 
     ucs = util.UniformCostSearch(verbose=0)
     ucs.solve(SegmentationProblem(query, unigramCost))
@@ -35,11 +39,18 @@ def segmentWords(query, unigramCost):
     # ### START CODE HERE ###
     # ### END CODE HERE ###
 
+
 ############################################################
 # Problem 2b: Solve the vowel insertion problem under a bigram cost
 
+
 class VowelInsertionProblem(util.SearchProblem):
-    def __init__(self, queryWords, bigramCost, possibleFills):
+    def __init__(
+        self,
+        queryWords: List[str],
+        bigramCost: Callable[[str, str], float],
+        possibleFills: Callable[[str], Set[str]],
+    ):
         self.queryWords = queryWords
         self.bigramCost = bigramCost
         self.possibleFills = possibleFills
@@ -49,7 +60,7 @@ class VowelInsertionProblem(util.SearchProblem):
         # ### START CODE HERE ###
         # ### END CODE HERE ###
 
-    def isEnd(self, state):
+    def isEnd(self, state) -> bool:
         pass
         # ### START CODE HERE ###
         # ### END CODE HERE ###
@@ -59,16 +70,28 @@ class VowelInsertionProblem(util.SearchProblem):
         # ### START CODE HERE ###
         # ### END CODE HERE ###
 
-def insertVowels(queryWords, bigramCost, possibleFills):
+
+def insertVowels(
+    queryWords: List[str],
+    bigramCost: Callable[[str, str], float],
+    possibleFills: Callable[[str], Set[str]],
+) -> str:
     pass
     # ### START CODE HERE ###
     # ### END CODE HERE ###
 
+
 ############################################################
 # Problem 3b: Solve the joint segmentation-and-insertion problem
 
+
 class JointSegmentationInsertionProblem(util.SearchProblem):
-    def __init__(self, query, bigramCost, possibleFills):
+    def __init__(
+        self,
+        query: str,
+        bigramCost: Callable[[str, str], float],
+        possibleFills: Callable[[str], Set[str]],
+    ):
         self.query = query
         self.bigramCost = bigramCost
         self.possibleFills = possibleFills
@@ -78,7 +101,7 @@ class JointSegmentationInsertionProblem(util.SearchProblem):
         # ### START CODE HERE ###
         # ### END CODE HERE ###
 
-    def isEnd(self, state):
+    def isEnd(self, state) -> bool:
         pass
         # ### START CODE HERE ###
         # ### END CODE HERE ###
@@ -88,14 +111,20 @@ class JointSegmentationInsertionProblem(util.SearchProblem):
         # ### START CODE HERE ###
         # ### END CODE HERE ###
 
-def segmentAndInsert(query, bigramCost, possibleFills):
+
+def segmentAndInsert(
+    query: str,
+    bigramCost: Callable[[str, str], float],
+    possibleFills: Callable[[str], Set[str]],
+) -> str:
     if len(query) == 0:
-        return ''
+        return ""
 
     # ### START CODE HERE ###
     # ### END CODE HERE ###
 
+
 ############################################################
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     shell.main()

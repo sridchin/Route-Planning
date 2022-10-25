@@ -1,28 +1,34 @@
-
 import collections
 import math
 
-SENTENCE_BEGIN = '-BEGIN-'
+SENTENCE_BEGIN = "-BEGIN-"
+
 
 def sliding(xs, windowSize):
     for i in range(1, len(xs) + 1):
-        yield xs[max(0, i - windowSize):i]
+        yield xs[max(0, i - windowSize) : i]
+
 
 def removeAll(s, chars):
-    return ''.join([c for c in s if c not in chars])
+    return "".join([c for c in s if c not in chars])
+
 
 def alphaOnly(s):
-    s = s.replace('-', ' ')
-    return ''.join([c for c in s if c.isalpha() or c == ' '])
+    s = s.replace("-", " ")
+    return "".join([c for c in s if c.isalpha() or c == " "])
+
 
 def cleanLine(l):
     return alphaOnly(l.strip().lower())
 
+
 def words(l):
     return l.split()
 
+
 ############################################################
 # Make an n-gram model of words in text from a corpus.
+
 
 def makeLanguageModels(path):
     unigramCounts = collections.Counter()
@@ -40,7 +46,7 @@ def makeLanguageModels(path):
         else:
             return tuple(win)
 
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         for l in f:
             ws = words(cleanLine(l))
             unigrams = [x[0] for x in sliding(ws, 1)]
@@ -53,22 +59,30 @@ def makeLanguageModels(path):
     def unigramCost(x):
         if x not in unigramCounts:
             length = max(LONG_WORD_THRESHOLD, len(x))
-            return -(length * math.log(LENGTH_DISCOUNT) + math.log(1.0) - math.log(VOCAB_SIZE))
+            return -(
+                length * math.log(LENGTH_DISCOUNT)
+                + math.log(1.0)
+                - math.log(VOCAB_SIZE)
+            )
         else:
             return math.log(totalCounts) - math.log(unigramCounts[x])
 
     def bigramModel(a, b):
-        return math.log(bitotalCounts[a] + VOCAB_SIZE) - math.log(bigramCounts[(a, b)] + 1)
+        return math.log(bitotalCounts[a] + VOCAB_SIZE) - math.log(
+            bigramCounts[(a, b)] + 1
+        )
 
     return unigramCost, bigramModel
+
 
 def logSumExp(x, y):
     lo = min(x, y)
     hi = max(x, y)
-    return math.log(1.0 + math.exp(lo - hi)) + hi;
+    return math.log(1.0 + math.exp(lo - hi)) + hi
+
 
 def smoothUnigramAndBigram(unigramCost, bigramModel, a):
-    '''Coefficient `a` is Bernoulli weight favoring unigram'''
+    """Coefficient `a` is Bernoulli weight favoring unigram"""
 
     # Want: -log( a * exp(-u) + (1-a) * exp(-b) )
     #     = -log( exp(log(a) - u) + exp(log(1-a) - b) )
@@ -77,18 +91,20 @@ def smoothUnigramAndBigram(unigramCost, bigramModel, a):
     def smoothModel(w1, w2):
         u = unigramCost(w2)
         b = bigramModel(w1, w2)
-        return -logSumExp(math.log(a) - u, math.log(1-a) - b)
+        return -logSumExp(math.log(a) - u, math.log(1 - a) - b)
 
     return smoothModel
+
 
 ############################################################
 # Make a map for inverse lookup of words without vowels -> possible
 # full words
 
+
 def makeInverseRemovalDictionary(path, removeChars):
     wordsRemovedToFull = collections.defaultdict(set)
 
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         for l in f:
             for w in words(cleanLine(l)):
                 wordsRemovedToFull[removeAll(w, removeChars)].add(w)
