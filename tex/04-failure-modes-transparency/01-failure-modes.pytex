@@ -1,4 +1,4 @@
-\item \points{3a}
+\item \points{4a}
 
 First, indicate which examples were reconstructed correctly versus incorrectly.
 Recall that the system chooses outputs based on a bigram cost function\footnote{Modulo edge cases, the $n$-gram model score in this assignment is
