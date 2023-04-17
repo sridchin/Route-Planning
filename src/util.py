@@ -158,12 +158,12 @@ class GridSearchProblem(SearchProblem):
     def succAndCost(self, state):
         x, y = state
         results = []
-        if x - 1 >= 0:
-            results.append(("North", (x - 1, y), 2))
-        if x + 1 < self.size:
-            results.append(("South", (x + 1, y), 1))
-        if y - 1 >= 0:
-            results.append(("West", (x, y - 1), 2))
         if y + 1 < self.size:
-            results.append(("East", (x, y + 1), 1))
+            results.append(("North", (x, y + 1), 2))
+        if y - 1 >= 0:
+            results.append(("South", (x, y - 1), 1))
+        if x - 1 >= 0:
+            results.append(("West", (x - 1, y), 2))
+        if x + 1 < self.size:
+            results.append(("East", (x + 1, y), 1))
         return results
