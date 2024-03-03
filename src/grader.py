@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
 import unittest, random, sys, copy, argparse, inspect
 from graderUtil import graded, CourseTestRunner, GradedTestCase
-import util, wordsegUtil
+
+import json
+from typing import List, Optional
+
+import util
+
+from mapUtil import (
+    CityMap,
+    checkValid,
+    createGridMap,
+    createGridMapWithCustomTags,
+    createStanfordMap,
+    getTotalCost,
+    locationFromTag,
+    makeGridLabel,
+    makeTag,
+)
 
 # Import student submission
 import submission
@@ -10,95 +26,51 @@ import submission
 # HELPER FUNCTIONS FOR CREATING TEST INPUTS #
 #############################################
 
-QUERIES_SEG = [
-    "ThestaffofficerandPrinceAndrewmountedtheirhorsesandrodeon",
-    "hellothere officerandshort erprince",
-    "howdythere",
-    "The staff officer and Prince Andrew mounted their horses and rode on.",
-    "whatsup",
-    "duduandtheprince",
-    "duduandtheking",
-    "withoutthecourtjester",
-    "lightbulbneedschange",
-    "imagineallthepeople",
-    "thisisnotmybeautifulhouse",
-]
+def extractPath(startLocation: str, search: util.SearchAlgorithm) -> List[str]:
+    """
+    Assumes that `solve()` has already been called on the `searchAlgorithm`.
 
-QUERIES_INS = [
-    "strng",
-    "pls",
-    "hll thr",
-    "whats up",
-    "dudu and the prince",
-    "frog and the king",
-    "ran with the queen and swam with jack",
-    "light bulbs need change",
-    "ffcr nd prnc ndrw",
-    "ffcr nd shrt prnc",
-    "ntrntnl",
-    "smthng",
-    "btfl",
-]
-
-QUERIES_BOTH = [
-    "stff",
-    "hllthr",
-    "thffcrndprncndrw",
-    "ThstffffcrndPrncndrwmntdthrhrssndrdn",
-    "whatsup",
-    "ipovercarrierpigeon",
-    "aeronauticalengineering",
-    "themanwiththegoldeneyeball",
-    "lightbulbsneedchange",
-    "internationalplease",
-    "comevisitnaples",
-    "somethingintheway",
-    "itselementarymydearwatson",
-    "itselementarymyqueen",
-    "themanandthewoman",
-    "nghlrdy",
-    "jointmodelingworks",
-    "jointmodelingworkssometimes",
-    "jointmodelingsometimesworks",
-    "rtfclntllgnc",
-]
-
-CORPUS = "leo-will.txt"
-
-_realUnigramCost, _realBigramCost, _possibleFills = None, None, None
+    We extract a sequence of locations from `search.path` (see util.py to better
+    understand exactly how this list gets populated).
+    """
+    return [startLocation] + search.actions
 
 
-def getRealCosts():
-    global _realUnigramCost, _realBigramCost, _possibleFills
+def printPath(
+    path: List[str],
+    waypointTags: List[str],
+    cityMap: CityMap,
+    outPath: Optional[str] = "path.json",
+):
+    doneWaypointTags = set()
+    for location in path:
+        for tag in cityMap.tags[location]:
+            if tag in waypointTags:
+                doneWaypointTags.add(tag)
+        tagsStr = " ".join(cityMap.tags[location])
+        doneTagsStr = " ".join(sorted(doneWaypointTags))
+        print(f"Location {location} tags:[{tagsStr}]; done:[{doneTagsStr}]")
+    print(f"Total distance: {getTotalCost(path, cityMap)}")
 
-    if _realUnigramCost is None:
-        print(f"Training language cost functions [corpus: {CORPUS}]... ", end="")
-
-        _realUnigramCost, _realBigramCost = wordsegUtil.makeLanguageModels(CORPUS)
-        _possibleFills = wordsegUtil.makeInverseRemovalDictionary(CORPUS, "aeiou")
-
-        print("Done!")
-        print("")
-
-    return _realUnigramCost, _realBigramCost, _possibleFills
+    # (Optional) Write path to file, for use with `visualize.py`
+    if outPath is not None:
+        with open(outPath, "w") as f:
+            data = {"waypointTags": waypointTags, "path": path}
+            json.dump(data, f, indent=2)
 
 
-def bigramCost(a, b):
-    corpus = [wordsegUtil.SENTENCE_BEGIN] + "beam me up scotty".split()
-    if (a, b) in list(zip(corpus, corpus[1:])):
-        return 1.0
-    else:
-        return 1000.0
+# Instantiate the Stanford Map as a constant --> just load once!
+stanfordMap = createStanfordMap()
 
+# To test your reduction, we'll define an admissible (but fairly unhelpful) heuristic
+class ZeroHeuristic(util.Heuristic):
+    """Estimates the cost between locations as 0 distance."""
+    def __init__(self, endTag: str, cityMap: CityMap):
+        self.endTag = endTag
+        self.cityMap = cityMap
 
-def possibleFills(x):
-    fills = {
-        "bm": set(["beam", "bam", "boom"]),
-        "m": set(["me", "ma"]),
-        "p": set(["up", "oop", "pa", "epe"]),
-        "sctty": set(["scotty"]),
-    }
-    return fills.get(x, set())
+    def evaluate(self, state: util.State) -> float:
+        return 0.0
 
 
 #########
@@ -106,339 +78,639 @@ def possibleFills(x):
 #########
 
 
-class A2_TestCase(GradedTestCase):
-    def setUp(self):
-        super().setUp()
-        self.unigramCost, self.bigramCost, self.possibleFills = getRealCosts()
+class Test_2a(GradedTestCase):
 
-
-class Test_1b(A2_TestCase):
-    @graded(timeout=2)
-    def test_0(self):
-        """1b-0-basic:  simple test case using hand-picked unigram costs."""
-
-        def unigramCost(x):
-            if x in ["and", "two", "three", "word", "words"]:
-                return 1.0
-            else:
-                return 1000.0
-
-        self.assertEqual("", submission.segmentWords("", unigramCost))
-        self.assertEqual("word", submission.segmentWords("word", unigramCost))
-        self.assertEqual("two words", submission.segmentWords("twowords", unigramCost))
-        self.assertEqual(
-            "and three words", submission.segmentWords("andthreewords", unigramCost)
-        )
-
-    @graded(timeout=2)
-    def test_1(self):
-        """1b-1-basic:  simple test case using unigram cost from the corpus"""
-        self.assertEqual("word", submission.segmentWords("word", self.unigramCost))
-        self.assertEqual(
-            "two words", submission.segmentWords("twowords", self.unigramCost)
-        )
-        self.assertEqual(
-            "and three words",
-            submission.segmentWords("andthreewords", self.unigramCost),
-        )
-
-    @graded(timeout=3, is_hidden=True)
-    def test_2(self):
-        """1b-2-hidden:"""
-        # Word seen in corpus
-        solution1 = submission.segmentWords("pizza", self.unigramCost)
-
-        # Even long unseen words are preferred to their arbitrary segmentations
-        solution2 = submission.segmentWords("qqqqq", self.unigramCost)
-        solution3 = submission.segmentWords("z" * 100, self.unigramCost)
-
-        # But 'a' is a word
-        solution4 = submission.segmentWords("aa", self.unigramCost)
-
-        # With an apparent crossing point at length 6->7
-        solution5 = submission.segmentWords("aaaaaa", self.unigramCost)
-        solution6 = submission.segmentWords("aaaaaaa", self.unigramCost)
+    def t_2a(
+        self,
+        cityMap: CityMap,
+        startLocation: str,
+        endTag: str,
+        expectedCost: Optional[float] = None,
+    ):
+        """
+        Run UCS on a ShortestPathProblem, specified by
+            (startLocation, endTag).
+        Check that the cost of the minimum cost path is `expectedCost`.
+        """
+        ucs = util.UniformCostSearch(verbose=0)
+        ucs.solve(submission.ShortestPathProblem(startLocation, endTag, cityMap))
+        path = extractPath(startLocation, ucs)
+        self.assertTrue(checkValid(path, cityMap, startLocation, endTag, []))
+        if expectedCost is not None:
+            self.assertEqual(expectedCost, getTotalCost(path, cityMap))
 
         # BEGIN_HIDE
         # END_HIDE
 
-    @graded(timeout=3, is_hidden=True)
+    @graded(timeout=1)
+    def test_0(self):
+        """2a-0-basic: shortest path on small grid."""
+
+        self.t_2a(
+            cityMap=createGridMap(3, 5),
+            startLocation=makeGridLabel(0, 0),
+            endTag=makeTag("label", makeGridLabel(2, 2)),
+            expectedCost=4,
+        )
+
+    @graded(timeout=1)
+    def test_1(self):
+        """2a-1-basic: shortest path with multiple end locations"""
+        
+        self.t_2a(
+            cityMap=createGridMap(30, 30),
+            startLocation=makeGridLabel(20, 10),
+            endTag=makeTag("x", "5"),
+            expectedCost=15,
+        )
+
+    @graded(timeout=1, is_hidden=True)
+    def test_2(self):
+        """2a-2-hidden: shortest path with larger grid"""
+        self.t_2a(
+            cityMap=createGridMap(100, 100),
+            startLocation=makeGridLabel(0, 0),
+            endTag=makeTag("label", makeGridLabel(99, 99)),
+        )
+
+    @graded(timeout=1)
     def test_3(self):
-        """1b-3-hidden:  hidden test case for all queries in QUERIES_SEG"""
-        for query in QUERIES_SEG:
-            query = wordsegUtil.cleanLine(query)
-            parts = wordsegUtil.words(query)
-            self.compare_with_solution_or_wait(
-                submission,
-                "segmentWords",
-                lambda f: [f(part, self.unigramCost) for part in parts],
+        """2a-3-basic: basic shortest path test case (2a-3)"""
+        
+        self.t_2a(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "gates"), stanfordMap),
+            endTag=makeTag("landmark", "oval"),
+            expectedCost=446.99724421432353,
+        )
+
+    @graded(timeout=1)
+    def test_4(self):
+        """2a-4-basic: basic shortest path test case (2a-4)"""
+        
+        self.t_2a(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "rains"), stanfordMap),
+            endTag=makeTag("landmark", "evgr_a"),
+            expectedCost=660.9598696201658,
+        )
+
+    @graded(timeout=1)
+    def test_5(self):
+        """2a-5-basic: basic shortest path test case (2a-5)"""
+        
+        self.t_2a(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "rains"), stanfordMap),
+            endTag=makeTag("landmark", "bookstore"),
+            expectedCost=1109.3271626156256,
+        )
+
+    @graded(timeout=1, is_hidden=True)
+    def test_6(self):
+        """2a-6-hidden: hidden shortest path test case (2a-6)"""
+        
+        self.t_2a(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "hoover_tower"), stanfordMap),
+            endTag=makeTag("landmark", "cantor_arts_center"),
+        )
+
+    @graded(timeout=1, is_hidden=True)
+    def test_7(self):
+        """2a-7-hidden: hidden shortest path test case (2a-7)"""
+        
+        self.t_2a(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "hoover_tower"), stanfordMap),
+            endTag=makeTag("landmark", "cantor_arts_center"),
+        )
+
+class Test_2b(GradedTestCase):
+
+    @graded(timeout=10)
+    def test_0(self):
+        """2b-0-helper: Helper function to get customized shortest path through Stanford for question 1b."""
+
+        """Given custom ShortestPathProblem, output path for visualization."""
+        problem = submission.getStanfordShortestPathProblem()
+        ucs = util.UniformCostSearch(verbose=0)
+        ucs.solve(problem)
+        path = extractPath(problem.startLocation, ucs)
+        printPath(path=path, waypointTags=[], cityMap=stanfordMap)
+
+        self.assertTrue(checkValid(path, stanfordMap, problem.startLocation, problem.endTag, []))
+
+        self.skipTest("This test case is a helper function for students.")
+
+class Test_3a(GradedTestCase):
+
+    def t_3ab(
+        self,
+        cityMap: CityMap,
+        startLocation: str,
+        endTag: str,
+        waypointTags: List[str],
+        expectedCost: Optional[float] = None,
+    ):
+        """
+        Run UCS on a WaypointsShortestPathProblem, specified by
+            (startLocation, waypointTags, endTag).
+        """
+        ucs = util.UniformCostSearch(verbose=0)
+        problem = submission.WaypointsShortestPathProblem(
+            startLocation,
+            waypointTags,
+            endTag,
+            cityMap,
+        )
+        ucs.solve(problem)
+        self.assertTrue(ucs.pathCost is not None)
+        path = extractPath(startLocation, ucs)
+        self.assertTrue(checkValid(path, cityMap, startLocation, endTag, waypointTags))
+        if expectedCost is not None:
+            self.assertTrue(expectedCost, getTotalCost(path, cityMap))
+
+        # BEGIN_HIDE
+        # END_HIDE
+
+    @graded(timeout=3)
+    def test_0(self):
+        """3a-0-basic: shortest path on small grid with 1 waypoint."""
+
+        self.t_3ab(
+            cityMap=createGridMap(3, 5),
+            startLocation=makeGridLabel(0, 0),
+            waypointTags=[makeTag("y", 4)],
+            endTag=makeTag("label", makeGridLabel(2, 2)),
+            expectedCost=8,
+        )
+
+    @graded(timeout=3)
+    def test_1(self):
+        """3a-1-basic: shortest path on medium grid with 2 waypoints."""
+
+        self.t_3ab(
+            cityMap=createGridMap(30, 30),
+            startLocation=makeGridLabel(20, 10),
+            waypointTags=[makeTag("x", 5), makeTag("x", 7)],
+            endTag=makeTag("label", makeGridLabel(3, 3)),
+            expectedCost=24.0,
+        )
+
+    @graded(timeout=3)
+    def test_2(self):
+        """3a-2-basic: shortest path with 3 waypoints and some locations covering multiple waypoints."""
+
+        self.t_3ab(
+            cityMap=createGridMapWithCustomTags(2, 2, {(0,0): [], (0,1): ["food", "fuel", "books"], (1,0): ["food"], (1,1): ["fuel"]}),
+            startLocation=makeGridLabel(0, 0),
+            waypointTags=[
+                "food", "fuel", "books"
+            ],
+            endTag=makeTag("label", makeGridLabel(0, 1)),
+            expectedCost=1.0,
+        )
+
+    @graded(timeout=3)
+    def test_3(self):
+        """3a-3-basic: shortest path with 3 waypoints and start location covering some waypoints."""
+
+        self.t_3ab(
+            cityMap=createGridMapWithCustomTags(2, 2, {(0,0): ["food"], (0,1): ["fuel"], (1,0): ["food"], (1,1): ["food", "fuel"]}),
+            startLocation=makeGridLabel(0, 0),
+            waypointTags=[
+                "food", "fuel"
+            ],
+            endTag=makeTag("label", makeGridLabel(0, 1)),
+            expectedCost=1.0,
+        )
+
+    @graded(timeout=3, is_hidden=True)
+    def test_4(self):
+        """3a-4-hidden: shortest path with 3 waypoints and start location covering some waypoints."""
+
+        self.t_3ab(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "gates"), stanfordMap),
+            waypointTags=[makeTag("landmark", "hoover_tower")],
+            endTag=makeTag("landmark", "oval"),
+            expectedCost=1108.3623108845995,
+        )
+
+    @graded(timeout=3)
+    def test_5(self):
+        """3a-5-basic: basic waypoints test case (3a-5)."""
+
+        self.t_3ab(
+            cityMap=createGridMapWithCustomTags(2, 2, {(0,0): ["food"], (0,1): ["fuel"], (1,0): ["food"], (1,1): ["food", "fuel"]}),
+            startLocation=makeGridLabel(0, 0),
+            waypointTags=[
+                "food", "fuel"
+            ],
+            endTag=makeTag("label", makeGridLabel(0, 1)),
+            expectedCost=1.0,
+        )
+
+
+    @graded(timeout=3)
+    def test_6(self):
+        """3a-6-basic: basic waypoints test case (3a-6)."""
+
+        self.t_3ab(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "evgr_a"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "memorial_church"),
+                makeTag("landmark", "tressider"),
+                makeTag("landmark", "gates"),
+            ],
+            endTag=makeTag("landmark", "evgr_a"),
+            expectedCost=3381.952714299139,
+        )
+
+    @graded(timeout=3)
+    def test_7(self):
+        """3a-7-basic: basic waypoints test case (3a-7)."""
+
+        self.t_3ab(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "rains"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "gates"),
+                makeTag("landmark", "AOERC"),
+                makeTag("landmark", "bookstore"),
+                makeTag("landmark", "hoover_tower"),
+            ],
+            endTag=makeTag("landmark", "green_library"),
+            expectedCost=3946.478546309725,
+        )
+
+
+    @graded(timeout=3, is_hidden=True)
+    def test_8(self):
+        """3a-8-hidden: hidden waypoints test case (3a-8)."""
+
+        self.t_3ab(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "oval"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "memorial_church"),
+                makeTag("landmark", "hoover_tower"),
+                makeTag("landmark", "bookstore"),
+            ],
+            endTag=makeTag("landmark", "AOERC"),
+        )
+
+    @graded(timeout=3, is_hidden=True)
+    def test_9(self):
+        """3a-9-hidden: hidden waypoints test case (3a-9)."""
+
+        self.t_3ab(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "oval"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "memorial_church"),
+                makeTag("landmark", "stanford_stadium"),
+                makeTag("landmark", "rains"),
+            ],
+            endTag=makeTag("landmark", "oval"),
+        )
+
+    @graded(timeout=5, is_hidden=True)
+    def test_10(self):
+        """3a-10-hidden: hidden waypoints test case (3a-10)."""
+
+        self.t_3ab(
+            cityMap=stanfordMap,
+            startLocation=locationFromTag(makeTag("landmark", "gates"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "lathrop_library"),
+                makeTag("landmark", "green_library"),
+                makeTag("landmark", "tressider"),
+                makeTag("landmark", "AOERC"),
+            ],
+            endTag=makeTag("landmark", "evgr_a"),
+        )
+
+    
+class Test_3c(GradedTestCase):
+
+    @graded(timeout=10)
+    def test_0(self):
+        """3c-0-helper: Helper function to get customized shortest path with waypoints through Stanford for question 2c."""
+
+        """Given custom WaypointsShortestPathProblem, output path for visualization."""
+        problem = submission.getStanfordWaypointsShortestPathProblem()
+        ucs = util.UniformCostSearch(verbose=0)
+        ucs.solve(problem)
+        path = extractPath(problem.startLocation, ucs)
+        printPath(path=path, waypointTags=problem.waypointTags, cityMap=stanfordMap)
+        self.assertTrue(
+            checkValid(
+                path,
+                stanfordMap,
+                problem.startLocation,
+                problem.endTag,
+                problem.waypointTags,
             )
+        )
 
+        self.skipTest("This test case is a helper function for students.")
 
-class Test_2b(A2_TestCase):
+class Test_4a(GradedTestCase):
+
+    def t_4a(
+        self,
+        cityMap: CityMap,
+        startLocation: str,
+        endTag: str,
+        expectedCost: Optional[float] = None,
+    ):
+        """
+        Run UCS on the A* Reduction of a ShortestPathProblem, specified by
+            (startLocation, endTag).
+        """
+        # We'll use the ZeroHeuristic to verify that the reduction works as expected
+        zeroHeuristic = ZeroHeuristic(endTag, cityMap)
+
+        # Define the baseProblem and corresponding reduction (using `zeroHeuristic`)
+        baseProblem = submission.ShortestPathProblem(startLocation, endTag, cityMap)
+        aStarProblem = submission.aStarReduction(baseProblem, zeroHeuristic)
+
+        # Solve the reduction via a call to `ucs.solve` (similar to prior tests)
+        ucs = util.UniformCostSearch(verbose=0)
+        ucs.solve(aStarProblem)
+        path = extractPath(startLocation, ucs)
+        self.assertTrue(checkValid(path, cityMap, startLocation, endTag, []))
+        if expectedCost is not None:
+            self.assertEqual(expectedCost, getTotalCost(path, cityMap))
+
+        # BEGIN_HIDE
+        # END_HIDE
+
+    @graded(timeout=1)
+    def test_0(self):
+        """4a-0-basic: A* shortest path on small grid."""
+
+        self.t_4a(
+            cityMap=createGridMap(3, 5),
+            startLocation=makeGridLabel(0, 0),
+            endTag=makeTag("label", makeGridLabel(2, 2)),
+            expectedCost=4,
+        )
+
+    @graded(timeout=1)
+    def test_1(self):
+        """4a-1-basic: A* shortest path with multiple end locations."""
+
+        self.t_4a(
+            cityMap=createGridMap(30, 30),
+            startLocation=makeGridLabel(20, 10),
+            endTag=makeTag("x", "5"),
+            expectedCost=15,
+        )
+
+    @graded(timeout=2, is_hidden=True)
+    def test_2(self):
+        """4a-2-hidden: A* shortest path with larger grid."""
+
+        self.t_4a(
+            cityMap=createGridMap(100, 100),
+            startLocation=makeGridLabel(0, 0),
+            endTag=makeTag("label", makeGridLabel(99, 99)),
+        )
+        
+class Test_4b(GradedTestCase):
+
+    def setUp(self):
+
+        # Initialize a `StraightLineHeuristic` using `endTag3b` and the `stanfordMap`
+        self.endTag3b = makeTag("landmark", "gates")
+
+        try:
+            self.stanfordStraightLineHeuristic = submission.StraightLineHeuristic(
+                self.endTag3b, stanfordMap
+            )
+        except:
+            self.stanfordNoWaypointsHeuristic = None
+        
+
+    def t_4b_heuristic(
+        self,
+        cityMap: CityMap,
+        startLocation: str,
+        endTag: str,
+        expectedCost: Optional[float] = None,
+    ):
+        """Targeted test for `StraightLineHeuristic` to ensure correctness."""
+        heuristic = submission.StraightLineHeuristic(endTag, cityMap)
+        heuristicCost = heuristic.evaluate(util.State(startLocation))
+        if expectedCost is not None:
+            self.assertEqual(expectedCost, heuristicCost)
+
+        # BEGIN_HIDE
+        # END_HIDE
+            
+    @graded(timeout=1)
+    def test_0(self):
+        """4b-0-basic: basic straight line heuristic unit test."""
+
+        self.t_4b_heuristic(
+            cityMap=createGridMap(3, 5),
+            startLocation=makeGridLabel(0, 0),
+            endTag=makeTag("label", makeGridLabel(2, 2)),
+            expectedCost=3.145067466556296,
+        )
+
+    @graded(timeout=1, is_hidden=True)
+    def test_1(self):
+        """4b-1-hidden: hidden straight line heuristic unit test."""
+
+        self.t_4b_heuristic(
+            cityMap=createGridMap(100, 100),
+            startLocation=makeGridLabel(0, 0),
+            endTag=makeTag("label", makeGridLabel(99, 99)),
+        )
+
+    def t_4b_aStar(
+        self,
+        startLocation: str, 
+        heuristic: util.Heuristic, 
+        expectedCost: Optional[float] = None
+    ):
+        """Run UCS on the A* Reduction of a ShortestPathProblem, w/ `heuristic`"""
+        baseProblem = submission.ShortestPathProblem(startLocation, self.endTag3b, stanfordMap)
+        aStarProblem = submission.aStarReduction(baseProblem, heuristic)
+
+        # Solve the reduction via a call to `ucs.solve` (similar to prior tests)
+        ucs = util.UniformCostSearch(verbose=0)
+        ucs.solve(aStarProblem)
+        path = extractPath(startLocation, ucs)
+        self.assertTrue(checkValid(path, stanfordMap, startLocation, self.endTag3b, []))
+        if expectedCost is not None:
+            self.assertEqual(expectedCost, getTotalCost(path, stanfordMap))
+
+        # BEGIN_HIDE
+        # END_HIDE
+            
+    @graded(timeout=2)
+    def test_2(self):
+        """4b-2-basic: basic straight line heuristic A* on Stanford map (4b-astar-1)."""
+
+        self.t_4b_aStar(
+            startLocation=locationFromTag(makeTag("landmark", "oval"), stanfordMap),
+            heuristic=self.stanfordStraightLineHeuristic,
+            expectedCost=446.9972442143235,
+        )
+
+    @graded(timeout=2)
+    def test_3(self):
+        """4b-3-basic: basic straight line heuristic A* on Stanford map (4b-astar-2)."""
+
+        self.t_4b_aStar(
+            startLocation=locationFromTag(makeTag("landmark", "rains"), stanfordMap),
+            heuristic=self.stanfordStraightLineHeuristic,
+            expectedCost=2005.4388573303765,
+        )
+
+    @graded(timeout=2, is_hidden=True)
+    def test_4(self):
+        """4b-4-hidden: hidden straight line heuristic A* on Stanford map (4b-astar-3)."""
+
+        self.t_4b_aStar(
+            startLocation=locationFromTag(makeTag("landmark", "bookstore"), stanfordMap),
+            heuristic=self.stanfordStraightLineHeuristic,
+        )
+
+    @graded(timeout=2, is_hidden=True)
+    def test_5(self):
+        """4b-5-hidden: hidden straight line heuristic A* on Stanford map (4b-astar-4)."""
+
+        self.t_4b_aStar(
+            startLocation=locationFromTag(makeTag("landmark", "evgr_a"), stanfordMap),
+            heuristic=self.stanfordStraightLineHeuristic,
+        )
+
+class Test_4c(GradedTestCase):
+
+    def setUp(self):
+
+        self.endTag3c = makeTag("wheelchair", "yes")
+
+        try:
+            self.stanfordNoWaypointsHeuristic = submission.NoWaypointsHeuristic(
+                self.endTag3c, stanfordMap
+            )
+        except:
+            self.stanfordNoWaypointsHeuristic = None
+
+    def t_4c_heuristic(
+        self,
+        startLocation: str, 
+        endTag: str, 
+        expectedCost: Optional[float] = None
+    ):
+        """Targeted test for `NoWaypointsHeuristic` -- uses the full Stanford map."""
+        heuristic = submission.NoWaypointsHeuristic(endTag, stanfordMap)
+        heuristicCost = heuristic.evaluate(util.State(startLocation))
+        if expectedCost is not None:
+            self.assertEqual(expectedCost, heuristicCost)
+
+        # BEGIN_HIDE
+        # END_HIDE
+            
     @graded(timeout=2)
     def test_0(self):
-        """2b-0-basic:  simple test case"""
+        """4c-0-basic: basic no waypoints heuristic unit test."""
 
-        def bigramCost(a, b):
-            corpus = [wordsegUtil.SENTENCE_BEGIN] + "beam me up scotty".split()
-            if (a, b) in list(zip(corpus, corpus[1:])):
-                return 1.0
-            else:
-                return 1000.0
-
-        def possibleFills(x):
-            fills = {
-                "bm": set(["beam", "bam", "boom"]),
-                "m": set(["me", "ma"]),
-                "p": set(["up", "oop", "pa", "epe"]),
-                "sctty": set(["scotty"]),
-            }
-            return fills.get(x, set())
-
-        self.assertEqual("", submission.insertVowels([], bigramCost, possibleFills))
-        self.assertEqual(  # No fills
-            "zz$z$zz", submission.insertVowels(["zz$z$zz"], bigramCost, possibleFills)
-        )
-        self.assertEqual(
-            "beam", submission.insertVowels(["bm"], bigramCost, possibleFills)
-        )
-        self.assertEqual(
-            "me up", submission.insertVowels(["m", "p"], bigramCost, possibleFills)
-        )
-        self.assertEqual(
-            "beam me up scotty",
-            submission.insertVowels("bm m p sctty".split(), bigramCost, possibleFills),
+        self.t_4c_heuristic(
+            startLocation=locationFromTag(makeTag("landmark", "oval"), stanfordMap),
+            endTag=makeTag("landmark", "gates"),
+            expectedCost=446.99724421432353,
         )
 
     @graded(timeout=2, is_hidden=True)
     def test_1(self):
-        """2b-1-hidden:  Simple hidden test case"""
-        solution1 = submission.insertVowels([], self.bigramCost, self.possibleFills)
-        # No fills
-        solution2 = submission.insertVowels(
-            ["zz$z$zz"], self.bigramCost, self.possibleFills
+        """4c-1-hidden: hidden no waypoints heuristic unit test w/ multiple end locations."""
+
+        self.t_4c_heuristic(
+            startLocation=locationFromTag(makeTag("landmark", "bookstore"), stanfordMap),
+            endTag=makeTag("amenity", "food"),
         )
-        solution3 = submission.insertVowels([""], self.bigramCost, self.possibleFills)
-        solution4 = submission.insertVowels(
-            "wld lk t hv mr lttrs".split(), self.bigramCost, self.possibleFills
+
+    def t_4c_aStar(
+        self,
+        startLocation: str,
+        waypointTags: List[str],
+        heuristic: util.Heuristic,
+        expectedCost: Optional[float] = None,
+    ):
+        """Run UCS on the A* Reduction of a WaypointsShortestPathProblem, w/ `heuristic`"""
+        baseProblem = submission.WaypointsShortestPathProblem(
+            startLocation, waypointTags, self.endTag3c, stanfordMap
         )
-        solution5 = submission.insertVowels(
-            "ngh lrdy".split(), self.bigramCost, self.possibleFills
+        aStarProblem = submission.aStarReduction(baseProblem, heuristic)
+
+        # Solve the reduction via a call to `ucs.solve` (similar to prior tests)
+        ucs = util.UniformCostSearch(verbose=0)
+        ucs.solve(aStarProblem)
+        path = extractPath(startLocation, ucs)
+        self.assertTrue(
+            checkValid(path, stanfordMap, startLocation, self.endTag3c, waypointTags)
         )
+        if expectedCost is not None:
+            self.assertEqual(expectedCost, getTotalCost(path, stanfordMap))
 
         # BEGIN_HIDE
         # END_HIDE
 
-    @graded(timeout=3, is_hidden=True)
-    def test_2(self):
-        """2b-2-hidden:  Simple hidden test case."""
-        SB = wordsegUtil.SENTENCE_BEGIN
-
-        # Check for correct use of SENTENCE_BEGIN
-        def bigramCost(a, b):
-            if (a, b) == (SB, "cat"):
-                return 5.0
-            elif a != SB and b == "dog":
-                return 1.0
-            else:
-                return 1000.0
-
-        solution1 = submission.insertVowels(
-            ["x"], bigramCost, lambda x: set(["cat", "dog"])
-        )
-
-        # Check for non-greediness
-        def bigramCost(a, b):
-            # Dog over log -- a test poem by rf
-            costs = {
-                (SB, "cat"): 1.0,  # Always start with cat
-                ("cat", "log"): 1.0,  # Locally prefer log
-                ("cat", "dog"): 2.0,  # rather than dog
-                ("log", "mouse"): 3.0,  # But dog would have been
-                ("dog", "mouse"): 1.0,  # better in retrospect
-            }
-            return costs.get((a, b), 1000.0)
-
-        def fills(x):
-            return {
-                "x1": set(["cat", "dog"]),
-                "x2": set(["log", "dog", "frog"]),
-                "x3": set(["mouse", "house", "cat"]),
-            }[x]
-
-        solution2 = submission.insertVowels("x1 x2 x3".split(), bigramCost, fills)
-
-        # Check for non-trivial long-range dependencies
-        def bigramCost(a, b):
-            # Dogs over logs -- another test poem by rf
-            costs = {
-                (SB, "cat"): 1.0,  # Always start with cat
-                ("cat", "log1"): 1.0,  # Locally prefer log
-                ("cat", "dog1"): 2.0,  # Rather than dog
-                ("log20", "mouse"): 1.0,  # And this might even
-                ("dog20", "mouse"): 1.0,  # seem to be okay
-            }
-            for i in range(1, 20):  # But along the way
-                #                               Dog's cost will decay
-                costs[("log" + str(i), "log" + str(i + 1))] = 0.25
-                costs[("dog" + str(i), "dog" + str(i + 1))] = 1.0 / float(i)
-            #                               Hooray
-            return costs.get((a, b), 1000.0)
-
-        def fills(x):
-            f = {
-                "x0": set(["cat", "dog"]),
-                "x21": set(["mouse", "house", "cat"]),
-            }
-            for i in range(1, 21):
-                f["x" + str(i)] = set(["log" + str(i), "dog" + str(i), "frog"])
-            return f[x]
-
-        solution3 = submission.insertVowels(
-            ["x" + str(i) for i in range(0, 22)], bigramCost, fills
-        )
-
-        # BEGIN_HIDE
-        # END_HIDE
-
-    @graded(timeout=3, is_hidden=True)
-    def test_3(self):
-        """2b-3-hidden:  hidden test case for all queries in QUERIES_INS"""
-        for query in QUERIES_INS:
-            query = wordsegUtil.cleanLine(query)
-            ws = [wordsegUtil.removeAll(w, "aeiou") for w in wordsegUtil.words(query)]
-            self.compare_with_solution_or_wait(
-                submission,
-                "insertVowels",
-                lambda f: f(copy.deepcopy(ws), self.bigramCost, self.possibleFills),
-            )
-
-
-class Test_3b(A2_TestCase):
     @graded(timeout=2)
-    def test_0(self):
-        """3b-0-basic:  Simple test case with hand-picked bigram costs and possible fills."""
+    def test_2(self):
+        """4c-2-basic: basic no waypoints heuristic A* on Stanford map (4c-astar-1)."""
 
-        def bigramCost(a, b):
-            if b in ["and", "two", "three", "word", "words"]:
-                return 1.0
-            else:
-                return 1000.0
-
-        fills_ = {
-            "nd": set(["and"]),
-            "tw": set(["two"]),
-            "thr": set(["three"]),
-            "wrd": set(["word"]),
-            "wrds": set(["words"]),
-        }
-        fills = lambda x: fills_.get(x, set())
-
-        self.assertEqual("", submission.segmentAndInsert("", bigramCost, fills))
-        self.assertEqual("word", submission.segmentAndInsert("wrd", bigramCost, fills))
-        self.assertEqual(
-            "two words", submission.segmentAndInsert("twwrds", bigramCost, fills)
-        )
-        self.assertEqual(
-            "and three words",
-            submission.segmentAndInsert("ndthrwrds", bigramCost, fills),
+        self.t_4c_aStar(
+            startLocation=locationFromTag(makeTag("landmark", "oval"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "gates"),
+                makeTag("landmark", "AOERC"),
+                makeTag("landmark", "bookstore"),
+                makeTag("landmark", "hoover_tower"),
+            ],
+            heuristic=self.stanfordNoWaypointsHeuristic,
+            expectedCost=2943.242598551967,
         )
 
     @graded(timeout=2)
-    def test_1(self):
-        """3b-1-basic:  simple test case with unigram costs as bigram costs"""
-        bigramCost = lambda a, b: self.unigramCost(b)
-
-        fills_ = {
-            "nd": set(["and"]),
-            "tw": set(["two"]),
-            "thr": set(["three"]),
-            "wrd": set(["word"]),
-            "wrds": set(["words"]),
-        }
-        fills = lambda x: fills_.get(x, set())
-
-        self.assertEqual("word", submission.segmentAndInsert("wrd", bigramCost, fills))
-        self.assertEqual(
-            "two words", submission.segmentAndInsert("twwrds", bigramCost, fills)
-        )
-        self.assertEqual(
-            "and three words",
-            submission.segmentAndInsert("ndthrwrds", bigramCost, fills),
-        )
-
-    @graded(timeout=3, is_hidden=True)
-    def test_2(self):
-        """3b-2-hidden:  hidden test case with unigram costs as bigram costs and additional possible fills."""
-        bigramCost = lambda a, b: self.unigramCost(b)
-        fills_ = {
-            "nd": set(["and"]),
-            "tw": set(["two"]),
-            "thr": set(["three"]),
-            "wrd": set(["word"]),
-            "wrds": set(["words"]),
-            # Hah!  Hit them with two better words
-            "th": set(["the"]),
-            "rwrds": set(["rewards"]),
-        }
-        fills = lambda x: fills_.get(x, set())
-
-        solution1 = submission.segmentAndInsert("wrd", bigramCost, fills)
-        solution2 = submission.segmentAndInsert("twwrds", bigramCost, fills)
-        # Waddaya know
-        solution3 = submission.segmentAndInsert("ndthrwrds", bigramCost, fills)
-
-        # BEGIN_HIDE
-        # END_HIDE
-
-    @graded(timeout=3, is_hidden=True)
     def test_3(self):
-        """3b-3-hidden:  hidden test case with hand-picked bigram costs and possible fills"""
+        """4c-3-basic: basic no waypoints heuristic A* on Stanford map (4c-astar-1)."""
 
-        def bigramCost(a, b):
-            corpus = [wordsegUtil.SENTENCE_BEGIN] + "beam me up scotty".split()
-            if (a, b) in list(zip(corpus, corpus[1:])):
-                return 1.0
-            else:
-                return 1000.0
+        self.t_4c_aStar(
+            startLocation=locationFromTag(makeTag("landmark", "AOERC"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "tressider"),
+                makeTag("landmark", "hoover_tower"),
+                makeTag("amenity", "food"),
+            ],
+            heuristic=self.stanfordNoWaypointsHeuristic,
+            expectedCost=1677.3814380413373,
+        )
 
-        def possibleFills(x):
-            fills = {
-                "bm": set(["beam", "bam", "boom"]),
-                "m": set(["me", "ma"]),
-                "p": set(["up", "oop", "pa", "epe"]),
-                "sctty": set(["scotty"]),
-                "z": set(["ze"]),
-            }
-            return fills.get(x, set())
-
-        # Ensure no non-word makes it through
-        solution1 = submission.segmentAndInsert("zzzzz", bigramCost, possibleFills)
-        solution2 = submission.segmentAndInsert("bm", bigramCost, possibleFills)
-        solution3 = submission.segmentAndInsert("mp", bigramCost, possibleFills)
-        solution4 = submission.segmentAndInsert("bmmpsctty", bigramCost, possibleFills)
-
-        # BEGIN_HIDE
-        # END_HIDE
-
-    @graded(timeout=3, is_hidden=True)
+    @graded(timeout=10, is_hidden=True)
     def test_4(self):
-        """3b-4-hidden:  hidden test case for all queries in QUERIES_BOTH with bigram costs and possible fills from the corpus"""
-        smoothCost = wordsegUtil.smoothUnigramAndBigram(
-            self.unigramCost, self.bigramCost, 0.2
-        )
-        for query in QUERIES_BOTH:
-            query = wordsegUtil.cleanLine(query)
-            parts = [
-                wordsegUtil.removeAll(w, "aeiou") for w in wordsegUtil.words(query)
-            ]
-            self.compare_with_solution_or_wait(
-                submission,
-                "segmentAndInsert",
-                lambda f: [f(part, smoothCost, self.possibleFills) for part in parts],
-            )
+        """4c-4-hidden: hidden no waypoints heuristic A* on Stanford map (4c-astar-3)."""
 
+        self.t_4c_aStar(
+            startLocation=locationFromTag(makeTag("landmark", "tressider"), stanfordMap),
+            waypointTags=[
+                makeTag("landmark", "gates"),
+                makeTag("amenity", "food"),
+                makeTag("landmark", "rains"),
+                makeTag("landmark", "stanford_stadium"),
+                makeTag("bicycle", "yes"),
+            ],
+            heuristic=self.stanfordNoWaypointsHeuristic,
+        )
 
 def getTestCaseForTestID(test_id):
     question, part, _ = test_id.split("-")
