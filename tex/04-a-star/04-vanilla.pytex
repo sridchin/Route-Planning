@@ -4,7 +4,7 @@ Recall that heuristics are most effective when they are equal to the future cost
 
 Provide a concrete example of $n$ |waypointTags| so that running A* with the |NoWaypointsHeuristic| results in the same running time complexity as solving the relaxed shortest path problem.
 
-\textbf{What we expect: } An example of $n$ <code>waypointTags</code> that satisfies the constraints of the question.
+\textbf{What we expect: } An example of $n$ |waypointTags| that satisfies the constraints of the question.
 
 🐍
 import re
