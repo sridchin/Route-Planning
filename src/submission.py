@@ -19,7 +19,7 @@ from util import Heuristic, SearchProblem, State, UniformCostSearch
 #   > Check out the docstring for `State` in `util.py` for more details and code.
 
 ########################################################################################
-# Problem 1a: Modeling the Shortest Path Problem.
+# Problem 2a: Modeling the Shortest Path Problem.
 
 
 class ShortestPathProblem(SearchProblem):
@@ -50,7 +50,7 @@ class ShortestPathProblem(SearchProblem):
 
 
 ########################################################################################
-# Problem 1b: Custom -- Plan a Route through Stanford
+# Problem 2b: Custom -- Plan a Route through Stanford
 
 
 def getStanfordShortestPathProblem() -> ShortestPathProblem:
@@ -79,7 +79,7 @@ def getStanfordShortestPathProblem() -> ShortestPathProblem:
 
 
 ########################################################################################
-# Problem 2a: Modeling the Waypoints Shortest Path Problem.
+# Problem 3a: Modeling the Waypoints Shortest Path Problem.
 
 
 class WaypointsShortestPathProblem(SearchProblem):
@@ -117,7 +117,7 @@ class WaypointsShortestPathProblem(SearchProblem):
 
 
 ########################################################################################
-# Problem 2b: Custom -- Plan a Route with Unordered Waypoints through Stanford
+# Problem 3b: Custom -- Plan a Route with Unordered Waypoints through Stanford
 
 
 def getStanfordWaypointsShortestPathProblem() -> WaypointsShortestPathProblem:
@@ -141,7 +141,7 @@ def getStanfordWaypointsShortestPathProblem() -> WaypointsShortestPathProblem:
 
 
 ########################################################################################
-# Problem 3a: A* to UCS reduction
+# Problem 4a: A* to UCS reduction
 
 # Turn an existing SearchProblem (`problem`) you are trying to solve with a
 # Heuristic (`heuristic`) into a new SearchProblem (`newSearchProblem`), such
@@ -174,7 +174,7 @@ def aStarReduction(problem: SearchProblem, heuristic: Heuristic) -> SearchProble
 
 
 ########################################################################################
-# Problem 3b: "straight-line" heuristic for A*
+# Problem 4b: "straight-line" heuristic for A*
 
 
 class StraightLineHeuristic(Heuristic):
@@ -197,7 +197,7 @@ class StraightLineHeuristic(Heuristic):
 
 
 ########################################################################################
-# Problem 3c: "no waypoints" heuristic for A*
+# Problem 4c: "no waypoints" heuristic for A*
 
 
 class NoWaypointsHeuristic(Heuristic):
