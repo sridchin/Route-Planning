@@ -117,7 +117,7 @@ class WaypointsShortestPathProblem(SearchProblem):
 
 
 ########################################################################################
-# Problem 3b: Custom -- Plan a Route with Unordered Waypoints through Stanford
+# Problem 3c: Custom -- Plan a Route with Unordered Waypoints through Stanford
 
 
 def getStanfordWaypointsShortestPathProblem() -> WaypointsShortestPathProblem:
@@ -125,7 +125,7 @@ def getStanfordWaypointsShortestPathProblem() -> WaypointsShortestPathProblem:
     Create your own search problem using the map of Stanford, specifying your own
     `startLocation`/`waypointTags`/`endTag`.
 
-    Similar to Problem 1b, use `readableStanfordMap.txt` to identify potential
+    Similar to Problem 2b, use `readableStanfordMap.txt` to identify potential
     locations and tags.
     """
     cityMap = createStanfordMap()
