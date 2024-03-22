@@ -63,7 +63,7 @@ class SearchAlgorithm:
         self.actions: List[str] = None
         self.pathCost: float = None
         self.numStatesExplored: int = 0
-        self.pastCosts: Dict[State, float] = {}
+        self.pastCosts: Dict[str, float] = {}
 
     def solve(self, problem: SearchProblem) -> None:
         raise NotImplementedError("Override me")
@@ -101,7 +101,7 @@ class UniformCostSearch(SearchAlgorithm):
         self.actions: List[str] = None
         self.pathCost: float = None
         self.numStatesExplored: int = 0
-        self.pastCosts: Dict[State, float] = {}
+        self.pastCosts: Dict[str, float] = {}
 
         # Initialize data structures
         frontier = PriorityQueue()  # Explored states are maintained by the frontier.
