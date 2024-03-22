@@ -493,7 +493,7 @@ class Test_4b(GradedTestCase):
                 self.endTag3b, stanfordMap
             )
         except:
-            self.stanfordNoWaypointsHeuristic = None
+            self.stanfordStraightLineHeuristic = None
         
 
     def t_4b_heuristic(
